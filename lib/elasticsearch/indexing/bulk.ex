@@ -26,11 +26,25 @@ defmodule Elasticsearch.Index.Bulk do
       {:error,
         %Protocol.UndefinedError{description: "",
         protocol: Elasticsearch.Document, value: 123}}
+
+      iex> Bulk.encode!(Cluster, %Post{id: "my-id"}, "my-index", "delete")
+      \"\"\"
+      {"delete":{"_index":"my-index","_id":"my-id"}}
+      \"\"\"
+
   """
   @spec encode(Cluster.t(), struct, String.t(), String.t()) ::
           {:ok, String.t()}
           | {:error, Error.t()}
-  def encode(cluster, struct, index, action \\ "create") do
+  def encode(cluster, struct, index, action \\ "create")
+
+  def encode!(cluster, struct, index, "delete") do
+    config = Cluster.Config.get(cluster)
+    header = header(config, "delete", index, struct)
+    "#{header}\n"
+  end
+
+  def encode!(cluster, struct, index, action) do
     {:ok, encode!(cluster, struct, index, action)}
   rescue
     exception ->
