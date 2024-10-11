@@ -26,25 +26,11 @@ defmodule Elasticsearch.Index.Bulk do
       {:error,
         %Protocol.UndefinedError{description: "",
         protocol: Elasticsearch.Document, value: 123}}
-
-      iex> Bulk.encode!(Cluster, %Post{id: "my-id"}, "my-index", "delete")
-      \"\"\"
-      {"delete":{"_index":"my-index","_id":"my-id"}}
-      \"\"\"
-
   """
   @spec encode(Cluster.t(), struct, String.t(), String.t()) ::
           {:ok, String.t()}
           | {:error, Error.t()}
-  def encode(cluster, struct, index, action \\ "create")
-
-  def encode!(cluster, struct, index, "delete") do
-    config = Cluster.Config.get(cluster)
-    header = header(config, "delete", index, struct)
-    "#{header}\n"
-  end
-
-  def encode!(cluster, struct, index, action) do
+  def encode(cluster, struct, index, action \\ "create") do
     {:ok, encode!(cluster, struct, index, action)}
   rescue
     exception ->
@@ -62,10 +48,24 @@ defmodule Elasticsearch.Index.Bulk do
       {"title":null,"doctype":{"name":"post"},"author":null}
       \"\"\"
 
+      iex> Bulk.encode!(Cluster, %Post{id: "my-id"}, "my-index", "delete")
+      \"\"\"
+      {"delete":{"_index":"my-index","_id":"my-id"}}
+      \"\"\"
+
       iex> Bulk.encode!(Cluster, 123, "my-index")
       ** (Protocol.UndefinedError) protocol Elasticsearch.Document not implemented for 123 of type Integer
+
   """
-  def encode!(cluster, struct, index, action \\ "create") do
+  def encode!(cluster, struct, index, action \\ "create")
+
+  def encode!(cluster, struct, index, "delete") do
+    config = Cluster.Config.get(cluster)
+    header = header(config, "delete", index, struct)
+    "#{header}\n"
+  end
+
+  def encode!(cluster, struct, index, action) do
     config = Cluster.Config.get(cluster)
     header = header(config, action, index, struct)
 
