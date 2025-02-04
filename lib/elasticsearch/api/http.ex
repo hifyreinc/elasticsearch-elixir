@@ -43,18 +43,25 @@ defmodule Elasticsearch.API.HTTP do
 
   # Converts the response body string from JSON into a map, if it looks like it
   # is actually JSON
-  defp process_response({:ok, %{body: body} = response}, config) do
-    body =
-      cond do
-        json?(body) -> json_library(config).decode!(body)
-        true -> body
-      end
-
+  defp process_response({:ok, %{body: body, headers: headers} = response}, config) do
+    body = if gzip?(headers), do: :zlib.gunzip(body), else: body
+    body = if json?(body), do: json_library(config).decode!(body), else: body
     {:ok, %{response | body: body}}
   end
 
   defp process_response(response, _config) do
     response
+  end
+
+  # Checks if the response is gzipped
+  @spec gzip?(headers :: [{binary, binary}]) :: boolean
+  defp gzip?(headers) do
+    headers
+    |> Enum.map(fn {key, value} -> {String.downcase(key), String.downcase(value)} end)
+    |> Enum.any?(fn
+      {"content-encoding", value} -> value in ["gzip", "x-gzip"]
+      _ -> false
+    end)
   end
 
   defp json?(str) when is_binary(str) do
